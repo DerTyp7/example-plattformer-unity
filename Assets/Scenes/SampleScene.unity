@@ -655,13 +655,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bca6c51a74bcf0c40a337fcb0ec638a4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  speed: 7
-  jumpForce: 10
-  jumpTime: 0.2
-  coyoteJumpTime: 0.2
   groundCheck: {fileID: 782312216}
-  groundCheckRadius: 0.2
-  groundLayerMask:
+  groundLayer:
     serializedVersion: 2
     m_Bits: 64
 --- !u!61 &1301724320

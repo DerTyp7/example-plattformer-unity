@@ -1,110 +1,96 @@
+using System.Collections;
 using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
 {
-    [SerializeField] private float speed;
-    private Rigidbody2D rb;
-    private float horizontalMovementInput;
-    private SpriteRenderer spriteRenderer;
+    private float horizontal;
+    private float speed = 8f;
+    private float jumpingPower = 16f;
+    private bool isFacingRight = true;
 
-    //* Jump
-    [Header("Jump")]
-    [SerializeField] private float jumpForce;
-    [SerializeField] private float jumpTime;
-    private float jumpTimeCounter;
     private bool isJumping;
 
-    //* Coyote Jumping
-    [Header("Coyote Jumping")]
-    [SerializeField] private float coyoteJumpTime;
-    private float coyoteJumpTimeCounter;
-    //* Ground Check
-    [Header("Ground Check")]
-    [SerializeField] private Transform groundCheck;
-    [SerializeField] private float groundCheckRadius;
-    [SerializeField] private LayerMask groundLayerMask;
-    private bool isGrounded;
+    private float coyoteTime = 0.2f;
+    private float coyoteTimeCounter;
 
+    private float jumpBufferTime = 0.2f;
+    private float jumpBufferCounter;
+
+    private Rigidbody2D rb;
+    [SerializeField] private Transform groundCheck;
+    [SerializeField] private LayerMask groundLayer;
 
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
-        spriteRenderer = GetComponent<SpriteRenderer>();
     }
 
     private void Update()
     {
-        Debug.DrawLine(transform.position, Camera.main.ScreenToWorldPoint(Input.mousePosition), Color.red, 0f);
+        horizontal = Input.GetAxisRaw("Horizontal");
 
-        isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayerMask);
-        horizontalMovementInput = Input.GetAxisRaw("Horizontal");
-
-        HandleCoyoteJump();
-        HandleSpriteDirection();
-        HandleJump();
-    }
-    private void FixedUpdate()
-    {
-        rb.velocity = new Vector2(horizontalMovementInput * speed, rb.velocity.y);
-    }
-
-    private void HandleSpriteDirection()
-    {
-        if (horizontalMovementInput > 0)
+        if (IsGrounded())
         {
-            spriteRenderer.flipX = false;
-        }
-        else if (horizontalMovementInput < 0)
-        {
-            spriteRenderer.flipX = true;
-        }
-    }
-
-    private void HandleJump()
-    {
-        if (Input.GetButtonDown("Jump") && coyoteJumpTimeCounter > 0)
-        {
-            isJumping = true;
-            jumpTimeCounter = jumpTime;
-            rb.velocity = Vector2.up * jumpForce;
-        }
-
-        if (Input.GetButton("Jump") && isJumping)
-        {
-            if (jumpTimeCounter > 0)
-            {
-                jumpTimeCounter -= Time.deltaTime;
-                rb.velocity = Vector2.up * jumpForce;
-            }
-            else
-            {
-                isJumping = false;
-            }
-        }
-
-        if (Input.GetButtonUp("Jump"))
-        {
-            isJumping = false;
-            coyoteJumpTimeCounter = 0;
-        }
-    }
-
-    private void HandleCoyoteJump()
-    {
-        if (isGrounded)
-        {
-            coyoteJumpTimeCounter = coyoteJumpTime;
+            coyoteTimeCounter = coyoteTime;
         }
         else
         {
-            coyoteJumpTimeCounter -= Time.deltaTime;
+            coyoteTimeCounter -= Time.deltaTime;
+        }
+
+        if (Input.GetButtonDown("Jump"))
+        {
+            jumpBufferCounter = jumpBufferTime;
+        }
+        else
+        {
+            jumpBufferCounter -= Time.deltaTime;
+        }
+
+        if (coyoteTimeCounter > 0f && jumpBufferCounter > 0f && !isJumping)
+        {
+            rb.velocity = new Vector2(rb.velocity.x, jumpingPower);
+
+            jumpBufferCounter = 0f;
+
+            StartCoroutine(JumpCooldown());
+        }
+
+        if (Input.GetButtonUp("Jump") && rb.velocity.y > 0f)
+        {
+            rb.velocity = new Vector2(rb.velocity.x, rb.velocity.y * 0.5f);
+
+            coyoteTimeCounter = 0f;
+        }
+
+        Flip();
+    }
+
+    private void FixedUpdate()
+    {
+        rb.velocity = new Vector2(horizontal * speed, rb.velocity.y);
+    }
+
+    private bool IsGrounded()
+    {
+        return Physics2D.OverlapCircle(groundCheck.position, 0.2f, groundLayer);
+    }
+
+    private void Flip()
+    {
+        if (isFacingRight && horizontal < 0f || !isFacingRight && horizontal > 0f)
+        {
+            Vector3 localScale = transform.localScale;
+            isFacingRight = !isFacingRight;
+            localScale.x *= -1f;
+            transform.localScale = localScale;
         }
     }
 
-    // Draw Gizmos-Sphere
-    private void OnDrawGizmos()
+    private IEnumerator JumpCooldown()
     {
-        Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(groundCheck.position, groundCheckRadius);
+        isJumping = true;
+        yield return new WaitForSeconds(0.4f);
+        isJumping = false;
     }
 }
